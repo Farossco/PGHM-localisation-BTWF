@@ -9,12 +9,26 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 
+#include <math.h>
+
 int scanTime = 5; //In seconds
 BLEScan* pBLEScan;
 
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
       Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
+      // init value localisation
+      double distance(1);
+      int power_meas(1);
+      int N_env(1);
+      // debug
+      power_meas=-69; //advertisedDevice.getTXPower();
+
+      // shadowing model to calculate distance from device emeting bluetooth
+      distance = pow((( power_meas - advertisedDevice.getRSSI())/(10*N_env)),10);
+      Serial.printf(" debug power meas = %d, RSSI = %d , N_envi %d " , power_meas, advertisedDevice.getRSSI(),N_env);
+      Serial.printf("Distance :  %f \n",distance);
+    
     }
 };
 
