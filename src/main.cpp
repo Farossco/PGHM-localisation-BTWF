@@ -16,7 +16,7 @@ BLEScan* pBLEScan;
 
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
-      Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
+      Serial.printf(" Advertised Device: %s \n", advertisedDevice.toString().c_str());
       // init value localisation
       double distance(1);
       int power_meas(1);
@@ -26,9 +26,13 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
       // shadowing model to calculate distance from device emeting bluetooth
       distance = pow((( power_meas - advertisedDevice.getRSSI())/(10*N_env)),10);
-      Serial.printf(" debug power meas = %d, RSSI = %d , N_envi %d " , power_meas, advertisedDevice.getRSSI(),N_env);
-      Serial.printf("Distance :  %f \n",distance);
-    
+      Serial.printf(" ### Debug power meas = %d, RSSI = %d " , power_meas, advertisedDevice.getRSSI());
+      Serial.printf("Distance :  %f, Fonction %d metre \n",distance, advertisedDevice.getDistance());
+      // Identification portable filtre
+      //char *pHex = BLEUtils::buildHexData(nullptr, (uint8_t*)getManufacturerData().data(), getManufacturerData().length());
+
+      //Serial.printf(" Manu data : %s, Match :  %d \n",advertisedDevice.getManufacturerData().c_str(),advertisedDevice.getManufacturerData()=="4c001005**");
+      //  Serial.printf(" Manu data : %s, Match :  %d \n",advertisedDevice.getManufacturerData().c_str(),"4c0010055564545645645156"=="4c0010055*");
     }
 };
 
@@ -49,7 +53,7 @@ void loop() {
   BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
   Serial.print("Devices found: ");
   Serial.println(foundDevices.getCount());
-  Serial.println("Scan done!");
+  Serial.println("Scan done! \n ");
   pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
   delay(2000);
 }
