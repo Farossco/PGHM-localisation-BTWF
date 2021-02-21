@@ -10,31 +10,52 @@
 #include <BLEAdvertisedDevice.h>
 
 #include <math.h>
+#include <string.h>
 
 int scanTime = 5; //In seconds
 BLEScan* pBLEScan;
+//Ajout Clement
+	int16_t      getDistance(BLEAdvertisedDevice Device);
+  bool detecte(const char*  ManufacturerData,BLEAdvertisedDevice target);
+  void debug(BLEAdvertisedDevice device);
+
+	//Fin Ajout Clement
 
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
-      Serial.printf(" Advertised Device: %s \n", advertisedDevice.toString().c_str());
-      // init value localisation
-      double distance(1);
-      int power_meas(1);
-      int N_env(1);
-      // debug
-      power_meas=-69; //advertisedDevice.getTXPower();
 
-      // shadowing model to calculate distance from device emeting bluetooth
-      distance = pow((( power_meas - advertisedDevice.getRSSI())/(10*N_env)),10);
-      Serial.printf(" ### Debug power meas = %d, RSSI = %d " , power_meas, advertisedDevice.getRSSI());
-      Serial.printf("Distance :  %f, Fonction %d metre \n",distance, advertisedDevice.getDistance());
+
+      //Serial.printf(" Advertised Device: %s \n", advertisedDevice.toString().c_str());
+ 
       // Identification portable filtre
-      //char *pHex = BLEUtils::buildHexData(nullptr, (uint8_t*)getManufacturerData().data(), getManufacturerData().length());
 
-      //Serial.printf(" Manu data : %s, Match :  %d \n",advertisedDevice.getManufacturerData().c_str(),advertisedDevice.getManufacturerData()=="4c001005**");
-      //  Serial.printf(" Manu data : %s, Match :  %d \n",advertisedDevice.getManufacturerData().c_str(),"4c0010055564545645645156"=="4c0010055*");
+      std::string res="coucou";
+      //const char *res ="coucou";
+      char *pHex = BLEUtils::buildHexData(nullptr, (uint8_t*)advertisedDevice.getManufacturerData().data(), advertisedDevice.getManufacturerData().length());
+      res= pHex;
+    
+		  
+      //Serial.printf(" Manu data : %s, Match :  %d , distance %d \n",pHex,strcmp(pHex,"4c00100*"),getDistance(advertisedDevice));
+      
+      debug(advertisedDevice);
+
+     // if(strcmp(pHex,"4c00100*")>5){
+       // Serial.printf("Portable détecté \n");
+        //Serial.printf(" Manu data : %s, Match :  %d , distance %d , RSSI %d \n",pHex,strcmp(pHex,"4c00100*"),getDistance(advertisedDevice),advertisedDevice.getRSSI() );
+      //}
+
+      if(detecte("4c00100*",advertisedDevice)){
+        Serial.printf("Portable détecté \n");
+        Serial.printf(" Manu data : %s , distance %d , RSSI %d \n",pHex,getDistance(advertisedDevice),advertisedDevice.getRSSI() );
+      }
+      free(pHex);
+      
     }
 };
+
+
+
+
 
 void setup() {
   Serial.begin(115200);
@@ -57,3 +78,51 @@ void loop() {
   pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
   delay(2000);
 }
+
+// Ajout Clement 
+/**
+ * @brief Calculate the distance.
+ * @return The distance between the esp32 and the BT device
+ */
+int16_t getDistance(BLEAdvertisedDevice Device) {
+	// init value localisation
+      double distance(1);
+      int power_meas(1);
+      int N_env(1);
+      // debug
+      power_meas=-69; //Device.getTXPower();
+
+      // shadowing model to calculate distance from device emeting bluetooth
+      distance = pow((( power_meas - Device.getRSSI())/(10*N_env)),10);
+	return distance;
+} // getDistance
+
+/**
+ * @brief Compare Manu data to target.
+ * @return Bool, true if match
+ */
+bool detecte(const char*  ManufacturerData,BLEAdvertisedDevice target){
+        // Attention, il faut connaitre les données constructeurs de l'appareil que l'on cherche à détecter
+        // Sachant qu'une partie la chaines de caractères est rendu aléatoire par le protocole
+        // Il faut donc mettre en argument la 1ère partie fixe
+          std::string res="coucou";
+          bool match(false);
+          char *pHex2 = BLEUtils::buildHexData(nullptr, (uint8_t*)target.getManufacturerData().data(), target.getManufacturerData().length());
+          res= pHex2;
+          match=strcmp(pHex2,ManufacturerData)>5;
+          free(pHex2);
+
+          return match;
+      };
+
+/**
+ * @brief Print data from BT device scan to help debug.
+ * @return void
+ */
+void debug(BLEAdvertisedDevice device){
+ Serial.printf(" Advertised Device: %s \n", device.toString().c_str());
+//  Serial.printf(" Manu data : %s, Match :  %d , distance %d \n",pHex,strcmp(pHex,"4c001005*"),getDistance(device));
+
+}
+
+// Fin Clement 
