@@ -1,4 +1,5 @@
 #include <Arduino.h>
+
 /*
    Based on Neil Kolban example for IDF: https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleScan.cpp
    Ported to Arduino ESP32 by Evandro Copercini
@@ -15,7 +16,7 @@
 int scanTime = 5; //In seconds
 BLEScan* pBLEScan;
 //Ajout Clement
-	int16_t      getDistance(BLEAdvertisedDevice Device);
+	double getDistance(BLEAdvertisedDevice Device);
   bool detecte(const char*  ManufacturerData,BLEAdvertisedDevice target);
   void debug(BLEAdvertisedDevice device);
 
@@ -37,16 +38,19 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 		  
       //Serial.printf(" Manu data : %s, Match :  %d , distance %d \n",pHex,strcmp(pHex,"4c00100*"),getDistance(advertisedDevice));
       
-      debug(advertisedDevice);
+      //debug(advertisedDevice);
 
-     // if(strcmp(pHex,"4c00100*")>5){
+     //if(strcmp(pHex,"4c00100*")>5){
        // Serial.printf("Portable détecté \n");
         //Serial.printf(" Manu data : %s, Match :  %d , distance %d , RSSI %d \n",pHex,strcmp(pHex,"4c00100*"),getDistance(advertisedDevice),advertisedDevice.getRSSI() );
       //}
 
       if(detecte("4c00100*",advertisedDevice)){
         Serial.printf("Portable détecté \n");
-        Serial.printf(" Manu data : %s , distance %d , RSSI %d \n",pHex,getDistance(advertisedDevice),advertisedDevice.getRSSI() );
+        Serial.printf(" Manu data : %s , distance %lf , RSSI %d \n",pHex,getDistance(advertisedDevice),advertisedDevice.getRSSI() );
+
+          /// bool Approche(distance,last_distance)
+
       }
       free(pHex);
       
@@ -84,16 +88,16 @@ void loop() {
  * @brief Calculate the distance.
  * @return The distance between the esp32 and the BT device
  */
-int16_t getDistance(BLEAdvertisedDevice Device) {
+double   getDistance(BLEAdvertisedDevice Device) {
 	// init value localisation
-      double distance(1);
-      int power_meas(1);
-      int N_env(1);
+      double   distance(1.0);
+      double    power_meas(1.0);
+      double   N_env(2.0);
       // debug
-      power_meas=-69; //Device.getTXPower();
+      power_meas=-69.000; //Device.getTXPower();
 
       // shadowing model to calculate distance from device emeting bluetooth
-      distance = pow((( power_meas - Device.getRSSI())/(10*N_env)),10);
+      distance = pow(10.0,(( power_meas - Device.getRSSI())/(10.0*N_env)));
 	return distance;
 } // getDistance
 
@@ -120,7 +124,7 @@ bool detecte(const char*  ManufacturerData,BLEAdvertisedDevice target){
  * @return void
  */
 void debug(BLEAdvertisedDevice device){
- Serial.printf(" Advertised Device: %s \n", device.toString().c_str());
+ Serial.printf(" Advertised Device: %s , RSSI : %d \n", device.toString().c_str(),device.getRSSI());
 //  Serial.printf(" Manu data : %s, Match :  %d , distance %d \n",pHex,strcmp(pHex,"4c001005*"),getDistance(device));
 
 }
