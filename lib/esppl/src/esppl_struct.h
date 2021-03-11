@@ -1,3 +1,9 @@
+/* ESPProLib from RicardoOliveira (https://github.com/RicardoOliveira/ESPProLib)
+ * Modified and updated by Farossco to work with ESP32
+ *
+ * https://github.com/Farossco/ESP32ProLib
+ */
+
 #define ESPPL_MAC_LEN                    6
 #define ESPPL_SSID_LEN                   33
 #define ESPPL_CHANNEL_MIN                1
@@ -5,83 +11,33 @@
 #define ESPPL_CHANNEL_DEFAULT            1
 #define ESPPL_MANAGEMENT_MAC_HEADER_SIZE 36
 
-/*
- * ESP8266 sniffer structures
- */
-struct RxControl
+typedef struct
 {
-	signed   rssi : 8;
-	unsigned rate : 4;
-	unsigned is_group : 1;
-	unsigned : 1;
-	unsigned sig_mode : 2;
-	unsigned legacy_length : 12;
-	unsigned damatch0 : 1;
-	unsigned damatch1 : 1;
-	unsigned bssidmatch0 : 1;
-	unsigned bssidmatch1 : 1;
-	unsigned MCS : 7;
-	unsigned CWB : 1;
-	unsigned HT_length : 16;
-	unsigned Smoothing : 1;
-	unsigned Not_Sounding : 1;
-	unsigned : 1;
-	unsigned Aggregation : 1;
-	unsigned STBC : 2;
-	unsigned FEC_CODING : 1;
-	unsigned SGI : 1;
-	unsigned rxend_state : 8;
-	unsigned ampdu_cnt : 8;
-	unsigned channel : 4;
-	unsigned : 12;
-};
+	unsigned protocolVersion : 2;
+	unsigned type : 2;
+	unsigned subtype : 4;
+	unsigned toDS : 1;
+	unsigned fromDS : 1;
+	unsigned moreFragments : 1;
+	unsigned retry : 1;
+	unsigned powerMngmt : 1;
+	unsigned moreData : 1;
+	unsigned protectedFrame : 1;
+	unsigned htcOrder : 1;
+} __attribute__((packed)) esppl_frame_control;
 
-struct LenSeq
+typedef struct
 {
-	uint16_t length;
-	uint16_t seq;
-	uint8_t  address3[6];
-};
+	esppl_frame_control fctl;
+	int16_t             duration;
+	uint8_t             destinationaddr[ESPPL_MAC_LEN];
+	uint8_t             sourceaddr[ESPPL_MAC_LEN];
+	uint8_t             bssid[ESPPL_MAC_LEN];
+	int16_t             seqctl;
+	unsigned char       payload[];
+} __attribute__((packed)) esppl_frame;
 
-struct sniffer_buf
-{
-	struct RxControl rx_ctrl;
-	uint8_t          buf[36];
-	uint16_t         cnt;
-	struct LenSeq    lenseq[1];
-};
-
-struct sniffer_buf2
-{
-	struct RxControl rx_ctrl;
-	uint8_t          buf[112];
-	uint16_t         cnt;
-	uint16_t         len;
-};
-
-/*
- * ESPProLib structures
- */
-struct esppl_frame_info
-{
-	uint8_t  frametype;
-	uint8_t  framesubtype;
-	uint8_t  receiveraddr[ESPPL_MAC_LEN];
-	uint8_t  destinationaddr[ESPPL_MAC_LEN];
-	uint8_t  transmitteraddr[ESPPL_MAC_LEN];
-	uint8_t  sourceaddr[ESPPL_MAC_LEN];
-	uint8_t  bssid[ESPPL_MAC_LEN];
-	uint8_t  ssid[ESPPL_SSID_LEN];
-	uint8_t  ssid_length;
-	unsigned channel;
-	signed   rssi;
-	uint16_t seq_num;
-	uint8_t  raw[512];
-	uint8_t  raw_length;
-	bool     isvalid;
-};
-
-typedef void (* ESPPL_CB_T) (esppl_frame_info * frame);
+typedef void (* ESPPL_CB_T) (esppl_frame * frame, wifi_pkt_rx_ctrl_t rxCtrl);
 
 // - DS Field
 const uint8_t ESPPL_DS_NO     = 0;

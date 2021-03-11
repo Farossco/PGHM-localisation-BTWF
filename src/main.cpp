@@ -13,13 +13,13 @@
  */
 
 #include <Arduino.h>
-#include "esppl_functions.h"
+#include <esppl_functions.h>
 
 /* If you want to track a specific address, it can be put in the friendMac list */
 #define FRIEND_LIST_SIZE   0
 #define DETECTED_LIST_SIZE 200
 #define RSSI_THRESHOLD     -40
-#define PRINT_NEARBY       false
+#define PRINT_NEARBY       true
 
 static int detectedListIndex = 0;
 
@@ -57,36 +57,49 @@ void maccpy (uint8_t * macS, uint8_t * macD)
 		macD[i] = macS[i];
 }
 
-void displayDevice (esppl_frame_info * info)
+void displayDevice (esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl)
 {
+	Serial.printf ("S : ");
 	for (int i = 0; i < ESPPL_MAC_LEN; i++)
-		Serial.printf ("%02X", info->sourceaddr[i]);
+		Serial.printf ("%02X", frame->sourceaddr[i]);
 
-	Serial.printf (" - ");
+	Serial.printf (" - D : ");
 
 	for (int i = 0; i < ESPPL_MAC_LEN; i++)
-		Serial.printf ("%02X", info->receiveraddr[i]);
+		Serial.printf ("%02X", frame->destinationaddr[i]);
 
-	Serial.printf (" (RSSI : %d dBm)\n", info->rssi);
+	Serial.printf (" - BSSID : ");
+
+	for (int i = 0; i < ESPPL_MAC_LEN; i++)
+		Serial.printf ("%02X", frame->bssid[i]);
+
+	Serial.printf (" - Type : %2d", frame->fctl.type);
+
+	Serial.printf (" - Subtype : %2d", frame->fctl.subtype);
+
+	Serial.printf (" - RSSI : %3d dBm\n", rxCtrl->rssi);
 }
 
-void cb (esppl_frame_info * info)
+void cb (esppl_frame * frame, wifi_pkt_rx_ctrl_t rxCtrl)
 {
+	if (frame->fctl.type != ESPPL_MANAGEMENT || frame->fctl.subtype != ESPPL_MANAGEMENT_PROBE_REQUEST)
+		return;
+
 	bool newMac = true;
 
 	for (int i = 0; i < detectedListIndex; i++)
-		if (maccmp (info->sourceaddr, detectedmac[i]))
+		if (maccmp (frame->sourceaddr, detectedmac[i]))
 			newMac = false;
 
-	/* Detecting and printing close (RSSI > RSSI_THRESHOLD) devices as many times as we see them*/
-	if (PRINT_NEARBY && info->rssi > RSSI_THRESHOLD)
+	// Detecting and printing close (RSSI > RSSI_THRESHOLD) devices as many times as we see them
+	if (PRINT_NEARBY && rxCtrl.rssi > RSSI_THRESHOLD)
 	{
 		Serial.printf ("[Near] ");
 
-		displayDevice (info);
+		displayDevice (frame, &rxCtrl);
 	}
 
-	/* Printing newly detected addresses, these addresses are printed once only */
+	// Printing newly detected addresses, these addresses are printed once only
 	if (newMac)
 	{
 		if (detectedListIndex == DETECTED_LIST_SIZE)
@@ -97,21 +110,17 @@ void cb (esppl_frame_info * info)
 		{
 			Serial.printf ("[New ] ");
 
-			displayDevice (info);
+			displayDevice (frame, &rxCtrl);
 
-			maccpy (info->sourceaddr, detectedmac[detectedListIndex]);
+			maccpy (frame->sourceaddr, detectedmac[detectedListIndex]);
 			detectedListIndex++;
 		}
 	}
 
-	/* Prints if a friend device is detected */
+	// Prints if a friend device is detected
 	for (int i = 0; i < FRIEND_LIST_SIZE; i++)
-	{
-		if (maccmp (info->sourceaddr, friendMac[i]) || maccmp (info->receiveraddr, friendMac[i]))
-		{
+		if (maccmp (frame->sourceaddr, friendMac[i]))
 			Serial.printf ("\n%s is here! :)", friendname[i].c_str());
-		}
-	}
 } // cb
 
 // start variables package - Skickar 2018 hardware LED for NodeMCU on mini breadboard //
@@ -120,19 +129,16 @@ void setup ()
 	delay (500);
 	Serial.begin (115200);
 	esppl_init (cb);
+	esppl_sniffing_start();
+	Serial.print ("Program started\n");
 }
 
 void loop ()
 {
-	// I didn't write this part but it sure looks fancy.
-	esppl_sniffing_start();
-	while (true)
+	for (int i = ESPPL_CHANNEL_MIN; i <= ESPPL_CHANNEL_MAX; i++)
 	{
-		for (int i = ESPPL_CHANNEL_MIN; i <= ESPPL_CHANNEL_MAX; i++)
-		{
-			esppl_set_channel (i);
-			while (esppl_process_frames())
-			{ }
-		}
+		esppl_set_channel (i);
+		while (esppl_process_frames())
+		{ }
 	}
 }
