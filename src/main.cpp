@@ -14,6 +14,7 @@
 
 #include <Arduino.h>
 #include <esppl_functions.h>
+#include "display.h"
 
 /* If you want to track a specific address, it can be put in the friendMac list */
 #define FRIEND_LIST_SIZE   0
@@ -57,8 +58,12 @@ void maccpy (uint8_t * macS, uint8_t * macD)
 		macD[i] = macS[i];
 }
 
-void displayDevice (esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl)
+void displayDevice (esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl, bool near)
 {
+	displayDeviceOnScreen (frame, rxCtrl, near);
+
+	Serial.printf ("[%s] ", near ? "Near" : "New ");
+
 	Serial.printf ("S : ");
 	for (int i = 0; i < ESPPL_MAC_LEN; i++)
 		Serial.printf ("%02X", frame->sourceaddr[i]);
@@ -77,7 +82,9 @@ void displayDevice (esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl)
 
 	Serial.printf (" - Subtype : %2d", frame->fctl.subtype);
 
-	Serial.printf (" - RSSI : %3d dBm\n", rxCtrl->rssi);
+	Serial.printf (" - RSSI : %3d dBm", rxCtrl->rssi);
+
+	Serial.printf (" - C : %d\n", rxCtrl->channel);
 }
 
 void cb (esppl_frame * frame, wifi_pkt_rx_ctrl_t rxCtrl)
@@ -91,14 +98,6 @@ void cb (esppl_frame * frame, wifi_pkt_rx_ctrl_t rxCtrl)
 		if (maccmp (frame->sourceaddr, detectedmac[i]))
 			newMac = false;
 
-	// Detecting and printing close (RSSI > RSSI_THRESHOLD) devices as many times as we see them
-	if (PRINT_NEARBY && rxCtrl.rssi > RSSI_THRESHOLD)
-	{
-		Serial.printf ("[Near] ");
-
-		displayDevice (frame, &rxCtrl);
-	}
-
 	// Printing newly detected addresses, these addresses are printed once only
 	if (newMac)
 	{
@@ -108,13 +107,17 @@ void cb (esppl_frame * frame, wifi_pkt_rx_ctrl_t rxCtrl)
 		}
 		else
 		{
-			Serial.printf ("[New ] ");
-
-			displayDevice (frame, &rxCtrl);
+			displayDevice (frame, &rxCtrl, false); // Displaying with prefix [New]
 
 			maccpy (frame->sourceaddr, detectedmac[detectedListIndex]);
 			detectedListIndex++;
 		}
+	}
+
+	// Detecting and printing close (RSSI > RSSI_THRESHOLD) devices as many times as we see them
+	else if (PRINT_NEARBY && rxCtrl.rssi > RSSI_THRESHOLD)
+	{
+		displayDevice (frame, &rxCtrl, true); // Displaying with prefix [Near]
 	}
 
 	// Prints if a friend device is detected
@@ -131,6 +134,8 @@ void setup ()
 	esppl_init (cb);
 	esppl_sniffing_start();
 	Serial.print ("Program started\n");
+
+	initDisplay();
 }
 
 void loop ()
