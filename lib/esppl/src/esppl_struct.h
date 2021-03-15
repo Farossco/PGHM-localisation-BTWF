@@ -4,6 +4,9 @@
  * https://github.com/Farossco/ESP32ProLib
  */
 
+#ifndef ESP32PL_STRUCT_
+#define ESP32PL_STRUCT_
+
 #define ESPPL_MAC_LEN                    6
 #define ESPPL_SSID_LEN                   33
 #define ESPPL_CHANNEL_MIN                1
@@ -68,6 +71,7 @@ const uint8_t ESPPL_MANAGEMENT_ACTION                 = 13;
 const uint8_t ESPPL_MANAGEMENT_ACTION_NO_ACK          = 14;
 const uint8_t ESPPL_MANAGEMENT_RESERVED2              = 15;
 
+// TODO: rename the no-longer-reserved ones
 const uint8_t ESPPL_CONTROL_RESERVED1         = 0;
 const uint8_t ESPPL_CONTROL_RESERVED2         = 1;
 const uint8_t ESPPL_CONTROL_RESERVED3         = 2;
@@ -102,3 +106,5 @@ const uint8_t ESPPL_DATA_QOS_CF_POLL             = 13;
 const uint8_t ESPPL_DATA_QOS_CF_ACK_CF_POLL      = 14;
 
 // TODO: Reserved
+
+#endif // ifndef ESP32PL_STRUCT_
