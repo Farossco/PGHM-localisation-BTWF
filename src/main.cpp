@@ -15,6 +15,7 @@
 
 int scanTime = 5; //In seconds
 BLEScan* pBLEScan;
+bool affichage_debug=true;
 //Ajout Clement
 	double getDistance(BLEAdvertisedDevice Device);
   bool detecte(const char*  ManufacturerData,BLEAdvertisedDevice target);
@@ -38,8 +39,9 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 		  
       //Serial.printf(" Manu data : %s, Match :  %d , distance %d \n",pHex,strcmp(pHex,"4c00100*"),getDistance(advertisedDevice));
       
-      //debug(advertisedDevice);
-
+      if(affichage_debug){
+      debug(advertisedDevice);
+      }
      //if(strcmp(pHex,"4c00100*")>5){
        // Serial.printf("Portable détecté \n");
         //Serial.printf(" Manu data : %s, Match :  %d , distance %d , RSSI %d \n",pHex,strcmp(pHex,"4c00100*"),getDistance(advertisedDevice),advertisedDevice.getRSSI() );
@@ -47,7 +49,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
       if(detecte("4c00100*",advertisedDevice)){
         Serial.printf("Portable détecté \n");
-        Serial.printf(" Manu data : %s , distance %lf , RSSI %d \n",pHex,getDistance(advertisedDevice),advertisedDevice.getRSSI() );
+        Serial.printf("Manu data : %s  , distance %lf , RSSI %d \n",pHex,getDistance(advertisedDevice),advertisedDevice.getRSSI() );
 
           /// bool Approche(distance,last_distance)
 
@@ -62,8 +64,12 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
 
 void setup() {
+
   Serial.begin(115200);
-  Serial.println("Scanning...");
+  Serial.println("\nConnexion série initialisé à 11 520 baud(bits/s)");
+  Serial.printf("Chaque cycle de scanner dure %d secondes \n",scanTime);
+  Serial.printf("Le mode affichage est %s \n", affichage_debug ? "activé" : "désactivé" );
+  Serial.printf("\nScan en cours... \n");
 
   BLEDevice::init("");
   pBLEScan = BLEDevice::getScan(); //create new scan
@@ -76,9 +82,9 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
-  Serial.print("Devices found: ");
+  Serial.print("Appareil détecté: ");
   Serial.println(foundDevices.getCount());
-  Serial.println("Scan done! \n ");
+  Serial.println("Fin du scan! \n ");
   pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
   delay(2000);
 }
@@ -124,7 +130,7 @@ bool detecte(const char*  ManufacturerData,BLEAdvertisedDevice target){
  * @return void
  */
 void debug(BLEAdvertisedDevice device){
- Serial.printf(" Advertised Device: %s , RSSI : %d \n", device.toString().c_str(),device.getRSSI());
+ Serial.printf("Advertised Device: %s , RSSI : %d \n", device.toString().c_str(),device.getRSSI());
 //  Serial.printf(" Manu data : %s, Match :  %d , distance %d \n",pHex,strcmp(pHex,"4c001005*"),getDistance(device));
 
 }
