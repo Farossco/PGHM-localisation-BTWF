@@ -24,7 +24,7 @@ void esppl_rx_cb (void * buf, wifi_promiscuous_pkt_type_t type)
 	if (esppl_sniffing_enabled)
 	{
 		frame_waitlist++;
-		user_cb ((esppl_frame *) packet->payload, packet->rx_ctrl);
+		user_cb ((esppl_frame *) packet->payload, &packet->rx_ctrl);
 		frame_waitlist--;
 	}
 }

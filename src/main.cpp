@@ -1,20 +1,12 @@
 /*
- * Friend Detector by Ricardo Oliveira, modified by Farossco 2/23/2021
+ * Based on Friend Detector by Ricardo Oliveira, modified by Farossco 23/02/2021
  *
- * A Node MCU microcontroller + mini bread board + 4 pin RGB LED to detect when devices belonging to a target are nearby.
- *
- *
- * The function of this code is to read nearby Wi-Fi traffic in the form of packets. These packets are compared
- * to a list of MAC addresses we wish to track, and if the MAC address of a packet matches one on the list, we turn
- * on a colored LED that is linked to the user owning the device. For example, when my roommate comes home, the
- * transmissions from his phone will be detected and cause the blue LED to turn on until his phone is no longer detected.
- * It can detect more than one phone at a time, meaning if my phone (red) and my roommate's phone (blue) are both home,
- * the LED will show purple.
  */
 
 #include <Arduino.h>
 #include <esppl_functions.h>
 #include "display.h"
+#include "utils.h"
 
 /* If you want to track a specific address, it can be put in the friendMac list */
 #define FRIEND_LIST_SIZE   0
@@ -32,36 +24,18 @@ static int detectedListIndex = 0;
 uint8_t friendMac[FRIEND_LIST_SIZE][ESPPL_MAC_LEN] = { };
 
 /* This stores the MAC addresses we already detected to avoid printing them more than once*/
-uint8_t detectedmac[DETECTED_LIST_SIZE][ESPPL_MAC_LEN];
+uint8_t detectedMac[DETECTED_LIST_SIZE][ESPPL_MAC_LEN];
 
 /*
  * This is your friend's name list
  * put them in the same order as the MAC addresses
  */
-String friendname[FRIEND_LIST_SIZE] = { };
+String friendName[FRIEND_LIST_SIZE] = { };
 
-bool maccmp (uint8_t * mac1, uint8_t * mac2)
+/* Displays the device on the specified stream
+ */
+void displayDeviceOnStream (Stream &stream, esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl, bool near)
 {
-	for (int i = 0; i < ESPPL_MAC_LEN; i++)
-	{
-		if (mac1[i] != mac2[i])
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-void maccpy (uint8_t * macS, uint8_t * macD)
-{
-	for (int i = 0; i < ESPPL_MAC_LEN; i++)
-		macD[i] = macS[i];
-}
-
-void displayDevice (esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl, bool near)
-{
-	displayDeviceOnScreen (frame, rxCtrl, near);
-
 	Serial.printf ("[%s] ", near ? "Near" : "New ");
 
 	Serial.printf ("S : ");
@@ -87,7 +61,22 @@ void displayDevice (esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl, bool near)
 	Serial.printf (" - C : %d\n", rxCtrl->channel);
 }
 
-void cb (esppl_frame * frame, wifi_pkt_rx_ctrl_t rxCtrl)
+/* Displays the device on Serial and LCD Screen
+ */
+void displayDevice (esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl, bool near)
+{
+	displayDeviceOnScreen (frame, rxCtrl, near);
+
+	displayDeviceOnStream (Serial, frame, rxCtrl, near);
+}
+
+/* Callback function
+ *
+ * This function is called whenever a frame is received.
+ * All the informations on the frame are in the "frame" argument.
+ * the "rxCtrl" arguments gives information about the reception of the frame (RSSI, channel...)
+ */
+void cb (esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl)
 {
 	if (frame->fctl.type != ESPPL_MANAGEMENT || frame->fctl.subtype != ESPPL_MANAGEMENT_PROBE_REQUEST)
 		return;
@@ -95,7 +84,7 @@ void cb (esppl_frame * frame, wifi_pkt_rx_ctrl_t rxCtrl)
 	bool newMac = true;
 
 	for (int i = 0; i < detectedListIndex; i++)
-		if (maccmp (frame->sourceaddr, detectedmac[i]))
+		if (maccmp (frame->sourceaddr, detectedMac[i]))
 			newMac = false;
 
 	// Printing newly detected addresses, these addresses are printed once only
@@ -107,23 +96,23 @@ void cb (esppl_frame * frame, wifi_pkt_rx_ctrl_t rxCtrl)
 		}
 		else
 		{
-			displayDevice (frame, &rxCtrl, false); // Displaying with prefix [New]
+			displayDevice (frame, rxCtrl, false); // Displaying with prefix [New]
 
-			maccpy (frame->sourceaddr, detectedmac[detectedListIndex]);
+			maccpy (frame->sourceaddr, detectedMac[detectedListIndex]);
 			detectedListIndex++;
 		}
 	}
 
 	// Detecting and printing close (RSSI > RSSI_THRESHOLD) devices as many times as we see them
-	else if (PRINT_NEARBY && rxCtrl.rssi > RSSI_THRESHOLD)
+	else if (PRINT_NEARBY && rxCtrl->rssi > RSSI_THRESHOLD)
 	{
-		displayDevice (frame, &rxCtrl, true); // Displaying with prefix [Near]
+		displayDevice (frame, rxCtrl, true); // Displaying with prefix [Near]
 	}
 
 	// Prints if a friend device is detected
 	for (int i = 0; i < FRIEND_LIST_SIZE; i++)
 		if (maccmp (frame->sourceaddr, friendMac[i]))
-			Serial.printf ("\n%s is here! :)", friendname[i].c_str());
+			Serial.printf ("\n%s is here! :)", friendName[i].c_str());
 } // cb
 
 // start variables package - Skickar 2018 hardware LED for NodeMCU on mini breadboard //

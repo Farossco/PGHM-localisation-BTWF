@@ -40,7 +40,7 @@ typedef struct
 	unsigned char       payload[];
 } __attribute__((packed)) esppl_frame;
 
-typedef void (* ESPPL_CB_T) (esppl_frame * frame, wifi_pkt_rx_ctrl_t rxCtrl);
+typedef void (* ESPPL_CB_T) (esppl_frame * frame, wifi_pkt_rx_ctrl_t * rxCtrl);
 
 // - DS Field
 const uint8_t ESPPL_DS_NO     = 0;
